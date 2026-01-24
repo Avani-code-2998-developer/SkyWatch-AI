@@ -139,6 +139,12 @@ class UIEffects {
     const password = document.getElementById('password').value;
 
     if (username && password) {
+      // Save username and display in topbar
+      const loggedUsername = document.getElementById('loggedUsername');
+      if (loggedUsername) {
+        loggedUsername.textContent = username || 'Operator';
+      }
+      
       // Transition to main app
       const loginScreen = document.getElementById('loginScreen');
       const mainApp = document.getElementById('mainApp');
@@ -213,6 +219,29 @@ class UIEffects {
         document.getElementById('loginForm').reset();
       });
     }
+    
+    // Footer menu buttons
+    document.querySelectorAll('.footer-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.getAttribute('data-footer-action');
+        
+        // Update active state
+        document.querySelectorAll('.footer-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // Map action to screen
+        const screenMap = {
+          'about': 'dashboard',
+          'dashboard': 'dashboard',
+          'live-tracking': 'live-tracking',
+          'ai-analysis': 'ai-analysis',
+          'alerts': 'alerts'
+        };
+        
+        const screen = screenMap[action] || action;
+        this.switchToScreen(screen);
+      });
+    });
   }
 
   switchToScreen(screen) {
@@ -246,15 +275,11 @@ class UIEffects {
   updateSystemTime() {
     const now = new Date();
     
-    // Convert to IST (UTC + 5:30)
-    const istOffset = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
-    const istTime = new Date(now.getTime() + istOffset);
-    
-    // Format time as HH:MM:SS
-    const hours = String(istTime.getUTCHours()).padStart(2, '0');
-    const minutes = String(istTime.getUTCMinutes()).padStart(2, '0');
-    const seconds = String(istTime.getUTCSeconds()).padStart(2, '0');
-    const timeString = `${hours}:${minutes}:${seconds} IST`;
+    // Use local system time
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const timeString = `${hours}:${minutes}:${seconds}`;
     
     const timeElement = document.getElementById('systemTime');
     if (timeElement) {

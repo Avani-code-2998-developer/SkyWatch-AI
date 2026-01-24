@@ -56,8 +56,10 @@
     <header class="topbar">
       <div class="topbar-brand">⚔️ SkyWatch AI Control Center</div>
       <div class="topbar-center">
+        <span class="topbar-user">👤 <span id="loggedUsername">Operator</span></span>
+        <span class="topbar-operator-id" id="operatorId">OP-2047</span>
         <span class="status-badge online">● SYSTEM ONLINE</span>
-        <span id="systemTime" class="topbar-time">00:00:00 IST</span>
+        <span id="systemTime" class="topbar-time">00:00:00</span>
       </div>
       <div class="topbar-right">
         <button id="btnLogout" class="logout-btn">LOGOUT</button>
@@ -244,6 +246,30 @@
           </div>
         </div>
       </main>
+      
+      <!-- FOOTER MENU BAR -->
+      <footer class="footer-menu">
+        <button class="footer-btn" data-footer-action="about">
+          <span class="footer-icon">ℹ️</span>
+          <span class="footer-label">About System</span>
+        </button>
+        <button class="footer-btn" data-footer-action="dashboard">
+          <span class="footer-icon">📊</span>
+          <span class="footer-label">Dashboard</span>
+        </button>
+        <button class="footer-btn active" data-footer-action="live-tracking">
+          <span class="footer-icon">📡</span>
+          <span class="footer-label">Live Tracking</span>
+        </button>
+        <button class="footer-btn" data-footer-action="ai-analysis">
+          <span class="footer-icon">🤖</span>
+          <span class="footer-label">AI Analysis</span>
+        </button>
+        <button class="footer-btn" data-footer-action="alerts">
+          <span class="footer-icon">⚠️</span>
+          <span class="footer-label">Alerts & History</span>
+        </button>
+      </footer>
     </div>
   </div>
 
