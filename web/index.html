@@ -54,10 +54,10 @@
   <div id="mainApp" class="main-app">
     <!-- TOP STATUS BAR -->
     <header class="topbar">
-      <div class="topbar-brand">⚔️ SKYWATCH AI CONTROL CENTER</div>
+      <div class="topbar-brand">⚔️ SkyWatch AI Control Center</div>
       <div class="topbar-center">
         <span class="status-badge online">● SYSTEM ONLINE</span>
-        <span id="systemTime" class="topbar-time">00:00:00 UTC</span>
+        <span id="systemTime" class="topbar-time">00:00:00 IST</span>
       </div>
       <div class="topbar-right">
         <button id="btnLogout" class="logout-btn">LOGOUT</button>
@@ -206,56 +206,42 @@
         </div>
       </aside>
 
-      <!-- MAIN VIEW (MAP OR DASHBOARD) -->
+      <!-- MAIN VIEW (MAP WITH HUD OVERLAYS) -->
       <main class="main-view">
-        <!-- Dashboard Screen with Option Cards -->
-        <div id="dashboardView" class="dashboard-view active">
-          <div class="dashboard-background">
-            <canvas id="dashboardCanvas"></canvas>
-          </div>
-          <div class="dashboard-content">
-            <h1 class="dashboard-title">INTELLIGENCE OPERATIONS</h1>
-            <p class="dashboard-subtitle">Select operational module to proceed</p>
+        <!-- Map Screen -->
+        <div id="mapView" class="map-view active">
+          <div id="map" class="map-container"></div>
+          
+          <!-- Floating HUD Panels -->
+          <div class="hud-panels">
+            <!-- Active Assets Panel -->
+            <div class="hud-panel hud-top-left">
+              <div class="hud-header">ACTIVE ASSETS</div>
+              <div class="hud-value" id="hudActiveAssets">3</div>
+              <div class="hud-subtext">Units Operational</div>
+            </div>
             
-            <div class="options-grid">
-              <!-- Live Tracking Card -->
-              <div class="option-card" data-action="live-tracking">
-                <div class="card-icon">📡</div>
-                <div class="card-title">Live Tracking</div>
-                <div class="card-description">Real-time monitoring and position tracking</div>
-                <div class="card-accent"></div>
-              </div>
-
-              <!-- AI Analysis Card -->
-              <div class="option-card" data-action="ai-analysis">
-                <div class="card-icon">🤖</div>
-                <div class="card-title">AI Analysis</div>
-                <div class="card-description">Advanced anomaly detection and prediction</div>
-                <div class="card-accent"></div>
-              </div>
-
-              <!-- Alerts & History Card -->
-              <div class="option-card" data-action="alerts">
-                <div class="card-icon">⚠️</div>
-                <div class="card-title">Alerts & History</div>
-                <div class="card-description">Event logging and incident management</div>
-                <div class="card-accent"></div>
-              </div>
-
-              <!-- Settings Card -->
-              <div class="option-card" data-action="settings">
-                <div class="card-icon">⚙️</div>
-                <div class="card-title">Settings</div>
-                <div class="card-description">System configuration and preferences</div>
-                <div class="card-accent"></div>
-              </div>
+            <!-- System Status Panel -->
+            <div class="hud-panel hud-top-right">
+              <div class="hud-header">SYSTEM STATUS</div>
+              <div class="hud-value" id="hudSystemStatus">OPERATIONAL</div>
+              <div class="hud-subtext">All Systems Online</div>
+            </div>
+            
+            <!-- Alerts Panel -->
+            <div class="hud-panel hud-bottom-left">
+              <div class="hud-header">ALERTS</div>
+              <div class="hud-value" id="hudAlertCount">0</div>
+              <div class="hud-subtext">Active Notifications</div>
+            </div>
+            
+            <!-- Coordinates Panel -->
+            <div class="hud-panel hud-bottom-right">
+              <div class="hud-header">COORDINATES</div>
+              <div class="hud-value" id="hudCoordinates">20.5937°N, 78.9629°E</div>
+              <div class="hud-subtext">Center: India</div>
             </div>
           </div>
-        </div>
-
-        <!-- Map Screen -->
-        <div id="mapView" class="map-view">
-          <div id="map" class="map-container"></div>
         </div>
       </main>
     </div>

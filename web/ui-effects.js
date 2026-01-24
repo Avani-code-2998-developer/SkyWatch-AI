@@ -152,112 +152,12 @@ class UIEffects {
 
   // ==================== DASHBOARD ====================
   setupDashboard() {
-    const dashboardCanvas = document.getElementById('dashboardCanvas');
-    if (!dashboardCanvas) return;
-
-    const ctx = dashboardCanvas.getContext('2d');
-    let particles = [];
-    let scanY = 0;
-
-    // Set canvas size
-    const resizeCanvas = () => {
-      dashboardCanvas.width = window.innerWidth;
-      dashboardCanvas.height = window.innerHeight;
-    };
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-
-    // Particle system
-    class Particle {
-      constructor() {
-        this.x = Math.random() * dashboardCanvas.width;
-        this.y = Math.random() * dashboardCanvas.height;
-        this.vx = (Math.random() - 0.5) * 0.3;
-        this.vy = (Math.random() - 0.5) * 0.3;
-        this.size = Math.random() * 1;
-        this.opacity = Math.random() * 0.3 + 0.1;
-      }
-
-      update() {
-        this.x += this.vx;
-        this.y += this.vy;
-
-        if (this.x > dashboardCanvas.width) this.x = 0;
-        if (this.x < 0) this.x = dashboardCanvas.width;
-        if (this.y > dashboardCanvas.height) this.y = 0;
-        if (this.y < 0) this.y = dashboardCanvas.height;
-      }
-
-      draw() {
-        ctx.fillStyle = `rgba(30, 204, 113, ${this.opacity})`;
-        ctx.fillRect(this.x, this.y, this.size, this.size);
-      }
-    }
-
-    // Initialize particles
-    for (let i = 0; i < 60; i++) {
-      particles.push(new Particle());
-    }
-
-    const animateDashboard = () => {
-      // Dark background
-      ctx.fillStyle = '#0a0e17';
-      ctx.fillRect(0, 0, dashboardCanvas.width, dashboardCanvas.height);
-
-      // Subtle grid
-      ctx.strokeStyle = 'rgba(30, 204, 113, 0.03)';
-      ctx.lineWidth = 1;
-      const gridSize = 60;
-      for (let x = 0; x < dashboardCanvas.width; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, dashboardCanvas.height);
-        ctx.stroke();
-      }
-      for (let y = 0; y < dashboardCanvas.height; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(dashboardCanvas.width, y);
-        ctx.stroke();
-      }
-
-      // Scanning line
-      scanY += 0.5;
-      if (scanY > dashboardCanvas.height) scanY = 0;
-      ctx.strokeStyle = 'rgba(30, 204, 113, 0.1)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, scanY);
-      ctx.lineTo(dashboardCanvas.width, scanY);
-      ctx.stroke();
-
-      // Particles
-      particles.forEach(p => {
-        p.update();
-        p.draw();
-      });
-
-      requestAnimationFrame(animateDashboard);
-    };
-
-    // Option card click handlers
-    document.querySelectorAll('.option-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const action = card.getAttribute('data-action');
-        this.switchToScreen(action);
-      });
-    });
-
-    animateDashboard();
+    // Dashboard view is now replaced with the map view
+    // No need for dashboard canvas animations
   }
 
   // ==================== NAVIGATION ====================
   setupNavigation() {
-    // Dashboard nav button
-    document.querySelectorAll('[data-screen="dashboard"]').forEach(btn => {
-      btn.addEventListener('click', () => this.switchToScreen('dashboard'));
-    });
-
     // Screen nav buttons
     document.querySelectorAll('.nav-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -322,25 +222,10 @@ class UIEffects {
     });
     document.getElementById(`screen-${screen}`)?.classList.add('active');
 
-    // Update view
-    const dashboardView = document.getElementById('dashboardView');
+    // Map is always visible now - no need to toggle views
     const mapView = document.getElementById('mapView');
-
-    if (screen === 'dashboard') {
-      dashboardView.classList.add('active');
-      mapView.classList.remove('active');
-    } else {
-      dashboardView.classList.remove('active');
+    if (mapView && !mapView.classList.contains('active')) {
       mapView.classList.add('active');
-
-      // Initialize map on first access
-      if (screen !== 'dashboard' && !window.mapManager) {
-        setTimeout(() => {
-          if (window.mapManager) {
-            window.mapManager.map.invalidateSize();
-          }
-        }, 100);
-      }
     }
 
     // Update nav buttons
@@ -360,13 +245,68 @@ class UIEffects {
   // ==================== SYSTEM TIME ====================
   updateSystemTime() {
     const now = new Date();
-    const utcTime = now.toUTCString().split(' ')[4]; // HH:MM:SS UTC
+    
+    // Convert to IST (UTC + 5:30)
+    const istOffset = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
+    const istTime = new Date(now.getTime() + istOffset);
+    
+    // Format time as HH:MM:SS
+    const hours = String(istTime.getUTCHours()).padStart(2, '0');
+    const minutes = String(istTime.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(istTime.getUTCSeconds()).padStart(2, '0');
+    const timeString = `${hours}:${minutes}:${seconds} IST`;
+    
     const timeElement = document.getElementById('systemTime');
     if (timeElement) {
-      timeElement.textContent = utcTime;
+      timeElement.textContent = timeString;
     }
+    
+    // Update HUD panels
+    this.updateHUDPanels();
   }
-}
+  
+  updateHUDPanels() {
+    // Update active assets count
+    if (window.skyWatchApp) {
+      const activeCount = Object.values(window.skyWatchApp.objects).filter(obj => obj.isMoving).length;
+      const totalCount = Object.keys(window.skyWatchApp.objects).length;
+      
+      const hudActiveAssets = document.getElementById('hudActiveAssets');
+      if (hudActiveAssets) {
+        hudActiveAssets.textContent = totalCount;
+      }
+      
+      // Update alert count
+      const alertCount = window.skyWatchApp.alerts.length;
+      const hudAlertCount = document.getElementById('hudAlertCount');
+      if (hudAlertCount) {
+        hudAlertCount.textContent = alertCount;
+        if (alertCount > 0) {
+          hudAlertCount.classList.add('has-alerts');
+        } else {
+          hudAlertCount.classList.remove('has-alerts');
+        }
+      }
+      
+      // Update system status
+      const hudSystemStatus = document.getElementById('hudSystemStatus');
+      if (hudSystemStatus) {
+        const allIdle = Object.values(window.skyWatchApp.objects).every(obj => !obj.isMoving);
+        hudSystemStatus.textContent = allIdle ? 'STANDBY' : 'OPERATIONAL';
+      }
+      
+      // Update coordinates (current selected object)
+      const currentObj = window.skyWatchApp.objects[window.skyWatchApp.currentObjectId];
+      if (currentObj) {
+        const hudCoordinates = document.getElementById('hudCoordinates');
+        if (hudCoordinates) {
+          const lat = currentObj.lat.toFixed(4);
+          const lng = currentObj.lng.toFixed(4);
+          const latDir = currentObj.lat >= 0 ? 'N' : 'S';
+          const lngDir = currentObj.lng >= 0 ? 'E' : 'W';
+          hudCoordinates.textContent = `${Math.abs(lat)}°${latDir}, ${Math.abs(lng)}°${lngDir}`;
+        }
+      }
 
 // Initialize UI Effects when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
