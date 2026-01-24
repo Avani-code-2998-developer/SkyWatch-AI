@@ -70,13 +70,13 @@
       <!-- LEFT SIDEBAR (NAVIGATION) -->
       <aside class="sidebar">
         <nav class="sidebar-nav">
-          <button class="nav-btn active" data-screen="dashboard">
+          <button class="nav-btn active" data-screen="missile-testing">
+            <span class="nav-icon">🚀</span>
+            <span class="nav-label">Missile Testing</span>
+          </button>
+          <button class="nav-btn" data-screen="dashboard">
             <span class="nav-icon">📊</span>
             <span class="nav-label">Dashboard</span>
-          </button>
-          <button class="nav-btn" data-screen="live-tracking">
-            <span class="nav-icon">📡</span>
-            <span class="nav-label">Live Tracking</span>
           </button>
           <button class="nav-btn" data-screen="ai-analysis">
             <span class="nav-icon">🤖</span>
@@ -93,8 +93,45 @@
         </nav>
 
         <!-- SIDEBAR CONTENT PANELS -->
+        <!-- Missile Testing Panel -->
+        <div id="screen-missile-testing" class="sidebar-content active">
+          <div class="sidebar-header">Missile Operations</div>
+          <div class="control-box missile-ops">
+            <label>Missile Type</label>
+            <select id="missileType">
+              <option value="Agni-1" data-range="700" data-speed="1.5">Agni-1 (700 km)</option>
+              <option value="Agni-2" data-range="2000" data-speed="2.0">Agni-2 (2000 km)</option>
+              <option value="Agni-3" data-range="3000" data-speed="2.5">Agni-3 (3000 km)</option>
+              <option value="Agni-4" data-range="4000" data-speed="3.0">Agni-4 (4000 km)</option>
+              <option value="Agni-5" data-range="8000" data-speed="3.5" selected>Agni-5 (8000 km)</option>
+              <option value="Agni-6" data-range="13000" data-speed="4.0">Agni-6 (13000 km)</option>
+              <option value="Prithvi-1" data-range="350" data-speed="1.2">Prithvi-1 (350 km)</option>
+              <option value="Prithvi-2" data-range="250" data-speed="1.3">Prithvi-2 (250 km)</option>
+              <option value="Prithvi-3" data-range="600" data-speed="1.4">Prithvi-3 (600 km)</option>
+              <option value="BrahMos" data-range="450" data-speed="2.8">BrahMos (450 km)</option>
+              <option value="Shaurya" data-range="750" data-speed="2.5">Shaurya (750 km)</option>
+              <option value="Nirbhay" data-range="1000" data-speed="0.8">Nirbhay (1000 km)</option>
+              <option value="K-4" data-range="3500" data-speed="3.0">K-4 (3500 km)</option>
+              <option value="K-5" data-range="5000" data-speed="3.5">K-5 (5000 km)</option>
+              <option value="Dhanush" data-range="400" data-speed="1.5">Dhanush (400 km)</option>
+            </select>
+            <div class="missile-info">
+              <div>Selected: <strong id="missileName">Agni-5</strong></div>
+              <div>Range: <strong id="missileRange">8000 km</strong></div>
+            </div>
+            <div class="button-group">
+              <button id="btnMissileSelectLaunch" class="btn-small btn-green">Select Launch Point</button>
+              <button id="btnMissileSelectTarget" class="btn-small btn-blue">Select Target Point</button>
+            </div>
+            <div class="button-group" style="margin-top:8px;">
+              <button id="btnMissileStart" class="btn-small btn-green">Start Simulation</button>
+              <button id="btnMissileReset" class="btn-small btn-gray">Reset Simulation</button>
+            </div>
+          </div>
+        </div>
+
         <!-- Dashboard Info -->
-        <div id="screen-dashboard" class="sidebar-content active">
+        <div id="screen-dashboard" class="sidebar-content">
           <div class="sidebar-header">Command Center</div>
           <div class="sidebar-info">
             <p>Welcome to SkyWatch AI Intelligence Control System</p>
@@ -116,34 +153,10 @@
           </div>
         </div>
 
-        <!-- Live Tracking Panel -->
+        <!-- Live Tracking Panel (hidden when using missile testing) -->
         <div id="screen-live-tracking" class="sidebar-content">
           <div class="sidebar-header">Live Tracking</div>
-          <div class="control-box">
-            <label>Select Object</label>
-            <select id="objectSelector">
-              <option value="jet-1">✈️ Jet Alpha-1</option>
-              <option value="vehicle-1">🚗 Vehicle Bravo-1</option>
-              <option value="drone-1">🛸 Drone Charlie-1</option>
-            </select>
-          </div>
-          <div id="objectDetails" class="object-details">
-            <div class="detail-row"><span>ID:</span><strong id="detail-id">--</strong></div>
-            <div class="detail-row"><span>Speed:</span><strong id="detail-speed">0 m/s</strong></div>
-            <div class="detail-row"><span>Direction:</span><strong id="detail-direction">0°</strong></div>
-            <div class="detail-row"><span>Latitude:</span><strong id="detail-lat">0.0000</strong></div>
-            <div class="detail-row"><span>Longitude:</span><strong id="detail-lng">0.0000</strong></div>
-            <div class="detail-row"><span>Status:</span><strong id="detail-status">IDLE</strong></div>
-          </div>
-          <div class="control-box">
-            <label>Manual Control</label>
-            <div class="button-group">
-              <button id="btnStart" class="btn-small btn-green">Start</button>
-              <button id="btnStop" class="btn-small btn-blue">Stop</button>
-              <button id="btnReset" class="btn-small btn-gray">Reset</button>
-            </div>
-            <div class="keyboard-hint">Use WASD / Arrow Keys</div>
-          </div>
+          <p style="color:#a8b0be; font-size:12px; line-height:1.5;">Live tracking controls are hidden while Missile Testing is active.</p>
         </div>
 
         <!-- AI Analysis Panel -->
@@ -216,13 +229,6 @@
           
           <!-- Floating HUD Panels -->
           <div class="hud-panels">
-            <!-- Active Assets Panel -->
-            <div class="hud-panel hud-top-left">
-              <div class="hud-header">ACTIVE ASSETS</div>
-              <div class="hud-value" id="hudActiveAssets">3</div>
-              <div class="hud-subtext">Units Operational</div>
-            </div>
-            
             <!-- System Status Panel -->
             <div class="hud-panel hud-top-right">
               <div class="hud-header">SYSTEM STATUS</div>
@@ -249,17 +255,13 @@
       
       <!-- FOOTER MENU BAR -->
       <footer class="footer-menu">
-        <button class="footer-btn" data-footer-action="about">
-          <span class="footer-icon">ℹ️</span>
-          <span class="footer-label">About System</span>
+        <button class="footer-btn active" data-footer-action="missile-testing">
+          <span class="footer-icon">🚀</span>
+          <span class="footer-label">Missile Testing</span>
         </button>
         <button class="footer-btn" data-footer-action="dashboard">
           <span class="footer-icon">📊</span>
           <span class="footer-label">Dashboard</span>
-        </button>
-        <button class="footer-btn active" data-footer-action="live-tracking">
-          <span class="footer-icon">📡</span>
-          <span class="footer-label">Live Tracking</span>
         </button>
         <button class="footer-btn" data-footer-action="ai-analysis">
           <span class="footer-icon">🤖</span>
@@ -267,7 +269,11 @@
         </button>
         <button class="footer-btn" data-footer-action="alerts">
           <span class="footer-icon">⚠️</span>
-          <span class="footer-label">Alerts & History</span>
+          <span class="footer-label">Alerts</span>
+        </button>
+        <button class="footer-btn" data-footer-action="settings">
+          <span class="footer-icon">⚙️</span>
+          <span class="footer-label">Settings</span>
         </button>
       </footer>
     </div>

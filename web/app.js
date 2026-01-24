@@ -1,50 +1,8 @@
 // SkyWatch AI - Main Application Controller
 class SkyWatchApp {
   constructor() {
-    this.objects = {
-      'jet-1': {
-        id: 'jet-1',
-        name: 'Jet Alpha-1',
-        type: 'jet',
-        lat: 35.6892,
-        lng: 139.6917,
-        speed: 0,
-        direction: 0,
-        status: 'idle',
-        icon: '✈️',
-        color: '#2edc81',
-        path: [],
-        isMoving: false,
-      },
-      'vehicle-1': {
-        id: 'vehicle-1',
-        name: 'Vehicle Bravo-1',
-        type: 'vehicle',
-        lat: 35.6850,
-        lng: 139.7000,
-        speed: 0,
-        direction: 45,
-        status: 'idle',
-        icon: '🚗',
-        color: '#3d75c9',
-        path: [],
-        isMoving: false,
-      },
-      'drone-1': {
-        id: 'drone-1',
-        name: 'Drone Charlie-1',
-        type: 'drone',
-        lat: 35.7000,
-        lng: 139.6800,
-        speed: 0,
-        direction: 90,
-        status: 'idle',
-        icon: '🛸',
-        color: '#f39c12',
-        path: [],
-        isMoving: false,
-      }
-    };
+    // Objects removed - map focused on missile simulation only
+    this.objects = {};
 
     this.currentObjectId = 'jet-1';
     this.alerts = [];
@@ -73,6 +31,15 @@ class SkyWatchApp {
         this.mapManager = new MapManager(this);
         this.mapManager.init();
         window.mapManager = this.mapManager; // Global reference
+        // Apply current missile selection to map manager
+        const missileType = document.getElementById('missileType');
+        if (missileType) {
+          const opt = missileType.options[missileType.selectedIndex];
+          const name = opt.value;
+          const rangeKm = parseFloat(opt.getAttribute('data-range')) || 0;
+          const speedKms = parseFloat(opt.getAttribute('data-speed')) || 2.0;
+          this.mapManager.setMissileType(name, rangeKm, speedKms);
+        }
       }
     }, 100);
 
@@ -81,23 +48,21 @@ class SkyWatchApp {
   }
 
   setupEventListeners() {
-    // Object selector
+    // Object selector disabled - no tracking objects
     const objSelector = document.getElementById('objectSelector');
     if (objSelector) {
-      objSelector.addEventListener('change', (e) => {
-        this.currentObjectId = e.target.value;
-        this.updateObjectDetails();
-      });
+      objSelector.disabled = true;
+      objSelector.style.opacity = '0.5';
     }
 
-    // Control buttons
+    // Control buttons disabled - missile simulation only
     const btnStart = document.getElementById('btnStart');
     const btnStop = document.getElementById('btnStop');
     const btnReset = document.getElementById('btnReset');
 
-    if (btnStart) btnStart.addEventListener('click', () => this.startObject());
-    if (btnStop) btnStop.addEventListener('click', () => this.stopObject());
-    if (btnReset) btnReset.addEventListener('click', () => this.resetObject());
+    if (btnStart) { btnStart.disabled = true; btnStart.style.opacity = '0.5'; }
+    if (btnStop) { btnStop.disabled = true; btnStop.style.opacity = '0.5'; }
+    if (btnReset) { btnReset.disabled = true; btnReset.style.opacity = '0.5'; }
 
     // History controls
     const btnPlayHistory = document.getElementById('btnPlayHistory');
@@ -111,6 +76,54 @@ class SkyWatchApp {
     // Settings - AI button
     const btnEnableAI = document.getElementById('btnEnableAI');
     if (btnEnableAI) btnEnableAI.addEventListener('click', () => this.toggleAI());
+
+    // Missile controls
+    const missileType = document.getElementById('missileType');
+    const missileNameEl = document.getElementById('missileName');
+    const missileRangeEl = document.getElementById('missileRange');
+    if (missileType) {
+      const applyMissileSelection = () => {
+        const opt = missileType.options[missileType.selectedIndex];
+        const name = opt.value;
+        const rangeKm = parseFloat(opt.getAttribute('data-range')) || 0;
+        const speedKms = parseFloat(opt.getAttribute('data-speed')) || 2.0;
+        if (missileNameEl) missileNameEl.textContent = name;
+        if (missileRangeEl) missileRangeEl.textContent = `${rangeKm} km`;
+        if (window.mapManager) window.mapManager.setMissileType(name, rangeKm, speedKms);
+      };
+      missileType.addEventListener('change', applyMissileSelection);
+      // initialize once
+      applyMissileSelection();
+    }
+
+    const btnMissileSelectLaunch = document.getElementById('btnMissileSelectLaunch');
+    const btnMissileSelectTarget = document.getElementById('btnMissileSelectTarget');
+    const btnMissileStart = document.getElementById('btnMissileStart');
+    const btnMissileReset = document.getElementById('btnMissileReset');
+
+    if (btnMissileSelectLaunch) btnMissileSelectLaunch.addEventListener('click', () => {
+      if (!window.mapManager) return;
+      window.mapManager.enableLaunchSelection();
+      this.addAlert('Select a launch point on the map', 'info');
+    });
+
+    if (btnMissileSelectTarget) btnMissileSelectTarget.addEventListener('click', () => {
+      if (!window.mapManager) return;
+      window.mapManager.enableTargetSelection();
+      this.addAlert('Select a target point on the map', 'info');
+    });
+
+    if (btnMissileStart) btnMissileStart.addEventListener('click', () => {
+      if (!window.mapManager) return;
+      window.mapManager.startMissileSimulation();
+      this.addAlert('Missile simulation started', 'success');
+    });
+
+    if (btnMissileReset) btnMissileReset.addEventListener('click', () => {
+      if (!window.mapManager) return;
+      window.mapManager.resetMissileSimulation();
+      this.addAlert('Missile simulation reset', 'info');
+    });
 
     // Keyboard controls
     document.addEventListener('keydown', (e) => {
@@ -189,13 +202,13 @@ class SkyWatchApp {
   }
 
   updateObjectDetails() {
-    const obj = this.objects[this.currentObjectId];
-    document.getElementById('detail-id').textContent = obj.id;
-    document.getElementById('detail-speed').textContent = obj.speed.toFixed(1) + ' m/s';
-    document.getElementById('detail-direction').textContent = obj.direction.toFixed(0) + '°';
-    document.getElementById('detail-lat').textContent = obj.lat.toFixed(4);
-    document.getElementById('detail-lng').textContent = obj.lng.toFixed(4);
-    document.getElementById('detail-status').textContent = obj.status.toUpperCase();
+    // No tracking objects - clear display
+    document.getElementById('detail-id').textContent = '--';
+    document.getElementById('detail-speed').textContent = '--';
+    document.getElementById('detail-direction').textContent = '--';
+    document.getElementById('detail-lat').textContent = '--';
+    document.getElementById('detail-lng').textContent = '--';
+    document.getElementById('detail-status').textContent = 'DISABLED';
   }
 
   addAlert(message, type = 'info') {
@@ -264,22 +277,12 @@ class SkyWatchApp {
     }
   }
 
-  // Animation loop for continuous movement
+  // Animation loop disabled - no tracking objects
   startAnimationLoop() {
+    // Only missile simulation uses animation
     setInterval(() => {
-      Object.values(this.objects).forEach(obj => {
-        if (obj.isMoving) {
-          this.updateObjectPosition(obj);
-        }
-      });
-
-      if (this.mapManager) {
-        this.mapManager.updateMarkers();
-      }
-
-      this.updateObjectDetails();
       this.updateSystemStatus();
-    }, 100);
+    }, 1000);
   }
 
   updateObjectPosition(obj) {

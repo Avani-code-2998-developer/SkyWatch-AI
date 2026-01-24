@@ -234,8 +234,10 @@ class UIEffects {
           'about': 'dashboard',
           'dashboard': 'dashboard',
           'live-tracking': 'live-tracking',
+          'missile-testing': 'missile-testing',
           'ai-analysis': 'ai-analysis',
-          'alerts': 'alerts'
+          'alerts': 'alerts',
+          'settings': 'settings'
         };
         
         const screen = screenMap[action] || action;
@@ -250,6 +252,11 @@ class UIEffects {
       content.classList.remove('active');
     });
     document.getElementById(`screen-${screen}`)?.classList.add('active');
+
+    // Toggle missile mode for map clicks
+    if (window.mapManager) {
+      window.mapManager.setMissileMode(screen === 'missile-testing');
+    }
 
     // Map is always visible now - no need to toggle views
     const mapView = document.getElementById('mapView');
@@ -293,13 +300,6 @@ class UIEffects {
   updateHUDPanels() {
     // Update active assets count
     if (window.skyWatchApp) {
-      const activeCount = Object.values(window.skyWatchApp.objects).filter(obj => obj.isMoving).length;
-      const totalCount = Object.keys(window.skyWatchApp.objects).length;
-      
-      const hudActiveAssets = document.getElementById('hudActiveAssets');
-      if (hudActiveAssets) {
-        hudActiveAssets.textContent = totalCount;
-      }
       
       // Update alert count
       const alertCount = window.skyWatchApp.alerts.length;
@@ -313,25 +313,20 @@ class UIEffects {
         }
       }
       
-      // Update system status
+      // Update system status - always OPERATIONAL
       const hudSystemStatus = document.getElementById('hudSystemStatus');
       if (hudSystemStatus) {
-        const allIdle = Object.values(window.skyWatchApp.objects).every(obj => !obj.isMoving);
-        hudSystemStatus.textContent = allIdle ? 'STANDBY' : 'OPERATIONAL';
+        hudSystemStatus.textContent = 'OPERATIONAL';
       }
       
-      // Update coordinates (current selected object)
-      const currentObj = window.skyWatchApp.objects[window.skyWatchApp.currentObjectId];
-      if (currentObj) {
-        const hudCoordinates = document.getElementById('hudCoordinates');
-        if (hudCoordinates) {
-          const lat = currentObj.lat.toFixed(4);
-          const lng = currentObj.lng.toFixed(4);
-          const latDir = currentObj.lat >= 0 ? 'N' : 'S';
-          const lngDir = currentObj.lng >= 0 ? 'E' : 'W';
-          hudCoordinates.textContent = `${Math.abs(lat)}°${latDir}, ${Math.abs(lng)}°${lngDir}`;
-        }
+      // Update coordinates - center on India
+      const hudCoordinates = document.getElementById('hudCoordinates');
+      if (hudCoordinates) {
+        hudCoordinates.textContent = '20.5937°N, 78.9629°E';
       }
+      }
+    }
+  }
 
 // Initialize UI Effects when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {

@@ -8,6 +8,26 @@ class MapManager {
     this.currentMapStyle = 'normal';
     this.radarAnimation = null;
     this.gridOverlay = null;
+
+    this.missileModeActive = true;
+
+    // Missile simulation state
+    this.missile = {
+      name: 'Agni-5',
+      rangeKm: 8000,
+      speedKms: 2.0, // dummy speed in km/s
+      launchLatLng: null,
+      targetLatLng: null,
+      selectingLaunch: false,
+      selectingTarget: false,
+      rangeCircle: null,
+      pathLine: null,
+      missileMarker: null,
+      animReq: null,
+      startTime: null,
+      totalDistanceKm: 0,
+      estimatedTimeSec: 0
+    };
   }
 
   init() {
@@ -23,14 +43,10 @@ class MapManager {
 
     this.setMapStyle('dark');
 
-    // Add dark overlay
-    this.addDarkOverlay();
-
     // Draw country borders
     this.drawCountryBorders();
 
-    // Add country labels
-    this.addCountryLabels();
+    // Country labels removed for a cleaner look
 
     // Add radar animation
     this.addRadarAnimation();
@@ -43,13 +59,8 @@ class MapManager {
       this.handleMapClick(e);
     });
 
-    // Create markers and path lines
-    Object.entries(this.app.objects).forEach(([id, obj]) => {
-      this.createMarker(id, obj);
-      this.createPathLine(id);
-    });
-
-    this.updateMarkers();
+    // Object markers disabled - missile simulation only
+    // this.updateMarkers();
   }
 
   setMapStyle(style) {
@@ -122,12 +133,223 @@ class MapManager {
   }
 
   handleMapClick(e) {
-    const obj = this.app.objects[this.app.currentObjectId];
-    obj.lat = e.latlng.lat;
-    obj.lng = e.latlng.lng;
-    obj.path = [[e.latlng.lat, e.latlng.lng]];
-    this.updateMarkers();
-    this.app.addAlert(`${obj.name} repositioned to ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`, 'info');
+    if (!this.missileModeActive) return;
+    // Missile selection modes take precedence
+    if (this.missile.selectingLaunch) {
+      this.missile.launchLatLng = e.latlng;
+      this.missile.selectingLaunch = false;
+      this.drawMissileRange();
+      this.addMissileMarker('launch');
+      this.app.addAlert(`Launch point set at ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`, 'success');
+      return;
+    }
+    if (this.missile.selectingTarget) {
+      this.missile.targetLatLng = e.latlng;
+      this.missile.selectingTarget = false;
+      this.drawMissilePath();
+      this.addMissileMarker('target');
+      this.app.addAlert(`Target point set at ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`, 'warning');
+      return;
+    }
+
+    // Map clicks reserved for missile simulation only
+    // No default object repositioning
+  }
+
+  setMissileType(name, rangeKm, speedKms) {
+    this.missile.name = name;
+    this.missile.rangeKm = rangeKm;
+    this.missile.speedKms = speedKms || 2.0; // Use provided speed or default
+    this.updateMissileInfoHUD(false);
+    this.drawMissileRange();
+  }
+
+  setMissileMode(active) {
+    this.missileModeActive = active;
+    if (!active) {
+      this.resetMissileSimulation();
+    }
+  }
+
+  enableLaunchSelection() {
+    this.missile.selectingLaunch = true;
+    this.missile.selectingTarget = false;
+  }
+
+  enableTargetSelection() {
+    this.missile.selectingTarget = true;
+    this.missile.selectingLaunch = false;
+  }
+
+  drawMissileRange() {
+    if (!this.missile.launchLatLng) return;
+    if (this.missile.rangeCircle) this.map.removeLayer(this.missile.rangeCircle);
+    // Leaflet circle radius expects meters
+    const radiusMeters = this.missile.rangeKm * 1000;
+    this.missile.rangeCircle = L.circle(this.missile.launchLatLng, {
+      radius: radiusMeters,
+      color: '#1ecc71',
+      weight: 1.5,
+      opacity: 0.6,
+      fillColor: '#1ecc71',
+      fillOpacity: 0.08,
+    }).addTo(this.map);
+    const el = this.missile.rangeCircle.getElement();
+    if (el) el.classList.add('missile-range-circle');
+  }
+
+  drawMissilePath() {
+    if (!this.missile.launchLatLng || !this.missile.targetLatLng) return;
+    if (this.missile.pathLine) this.map.removeLayer(this.missile.pathLine);
+    const latlngs = [this.missile.launchLatLng, this.missile.targetLatLng];
+    this.missile.pathLine = L.polyline(latlngs, {
+      color: '#00d4ff',
+      weight: 2,
+      opacity: 0.9,
+      dashArray: '6,4'
+    }).addTo(this.map);
+    const el = this.missile.pathLine.getElement();
+    if (el) el.classList.add('missile-path-line');
+    // compute distance
+    this.missile.totalDistanceKm = this.haversineKm(latlngs[0], latlngs[1]);
+    this.missile.estimatedTimeSec = Math.round(this.missile.totalDistanceKm / this.missile.speedKms);
+    this.updateMissileInfoHUD();
+  }
+
+  addMissileMarker(which) {
+    const iconHtml = which === 'launch' ? '🚀' : '🎯';
+    const latlng = which === 'launch' ? this.missile.launchLatLng : this.missile.targetLatLng;
+    if (!latlng) return;
+    const marker = L.marker(latlng, {
+      icon: L.divIcon({
+        className: 'missile-marker',
+        html: `<div style="font-size:20px;">${iconHtml}</div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      }),
+      interactive: false
+    }).addTo(this.map);
+    if (which === 'launch') this.missile.launchMarker = marker; else this.missile.targetMarker = marker;
+  }
+
+  startMissileSimulation() {
+    if (!this.missile.launchLatLng || !this.missile.targetLatLng) return;
+    // create missile moving marker
+    if (this.missile.missileMarker) this.map.removeLayer(this.missile.missileMarker);
+    this.missile.missileMarker = L.marker(this.missile.launchLatLng, {
+      icon: L.divIcon({
+        className: 'missile-moving',
+        html: `<div style="font-size:18px;">🛰️</div>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11]
+      })
+    }).addTo(this.map);
+    this.missile.startTime = Date.now();
+    this.updateMissileInfoHUD(true, 'Launched');
+
+    const start = this.missile.launchLatLng;
+    const end = this.missile.targetLatLng;
+    const totalKm = this.missile.totalDistanceKm || this.haversineKm(start, end);
+    const totalSec = totalKm / this.missile.speedKms;
+
+    const animate = () => {
+      const elapsedSec = (Date.now() - this.missile.startTime) / 1000;
+      const t = Math.min(elapsedSec / totalSec, 1);
+      const lat = start.lat + (end.lat - start.lat) * t;
+      const lng = start.lng + (end.lng - start.lng) * t;
+      const bearing = this.computeBearing(start, { lat, lng });
+      this.missile.missileMarker.setLatLng({ lat, lng });
+      if (this.missile.missileMarker.setRotationAngle) {
+        this.missile.missileMarker.setRotationAngle(bearing);
+        this.missile.missileMarker.setRotationOrigin('center center');
+      }
+      this.updateMissileInfoHUD(true, t < 1 ? 'In Flight' : 'Target Reached', elapsedSec, totalSec, totalKm);
+      if (t < 1) {
+        this.missile.animReq = requestAnimationFrame(animate);
+      } else {
+        cancelAnimationFrame(this.missile.animReq);
+        this.missile.animReq = null;
+      }
+    };
+    this.missile.animReq = requestAnimationFrame(animate);
+  }
+
+  resetMissileSimulation() {
+    ['rangeCircle','pathLine','missileMarker','launchMarker','targetMarker'].forEach(k => {
+      if (this.missile[k]) { this.map.removeLayer(this.missile[k]); this.missile[k] = null; }
+    });
+    this.missile.launchLatLng = null;
+    this.missile.targetLatLng = null;
+    this.missile.startTime = null;
+    this.missile.totalDistanceKm = 0;
+    this.missile.estimatedTimeSec = 0;
+    this.updateMissileInfoHUD(false, 'Idle', 0, 0, 0);
+  }
+
+  updateMissileInfoHUD(showPanel = false, status = 'Idle', elapsedSec = 0, totalSec = this.missile.estimatedTimeSec, distanceKm = this.missile.totalDistanceKm) {
+    let panel = document.getElementById('missile-info-panel');
+    if (!panel && showPanel) {
+      panel = document.createElement('div');
+      panel.id = 'missile-info-panel';
+      panel.innerHTML = `
+        <div class="title">MISSILE SIMULATION</div>
+        <div class="row"><span>Name</span><strong id="hudMissileName"></strong></div>
+        <div class="row"><span>Speed</span><strong id="hudMissileSpeed"></strong></div>
+        <div class="row"><span>Distance</span><strong id="hudMissileDistance"></strong></div>
+        <div class="row"><span>Elapsed</span><strong id="hudMissileElapsed"></strong></div>
+        <div class="row"><span>ETA</span><strong id="hudMissileETA"></strong></div>
+        <div class="row"><span>Status</span><strong id="hudMissileStatus"></strong></div>
+      `;
+      this.map._container.appendChild(panel);
+      this.makePanelDraggable(panel);
+    }
+    if (!panel) return;
+    panel.style.display = showPanel ? 'block' : 'none';
+    const nameEl = panel.querySelector('#hudMissileName');
+    const speedEl = panel.querySelector('#hudMissileSpeed');
+    const distEl = panel.querySelector('#hudMissileDistance');
+    const elapsedEl = panel.querySelector('#hudMissileElapsed');
+    const etaEl = panel.querySelector('#hudMissileETA');
+    const statusEl = panel.querySelector('#hudMissileStatus');
+    if (nameEl) nameEl.textContent = this.missile.name;
+    if (speedEl) speedEl.textContent = `${this.missile.speedKms.toFixed(2)} km/s`;
+    if (distEl) distEl.textContent = `${(distanceKm||0).toFixed(1)} km`;
+    if (elapsedEl) elapsedEl.textContent = `${Math.floor(elapsedSec)} s`;
+    if (etaEl) etaEl.textContent = `${Math.max(0, Math.floor(totalSec - elapsedSec))} s`;
+    if (statusEl) statusEl.textContent = status;
+  }
+
+  makePanelDraggable(panel) {
+    let isDragging = false, startX = 0, startY = 0, origX = 0, origY = 0;
+    const onDown = (e) => { isDragging = true; startX = e.clientX; startY = e.clientY; const rect = panel.getBoundingClientRect(); origX = rect.left; origY = rect.top; e.preventDefault(); };
+    const onMove = (e) => { if (!isDragging) return; const dx = e.clientX - startX; const dy = e.clientY - startY; panel.style.left = `${origX + dx}px`; panel.style.top = `${origY + dy}px`; };
+    const onUp = () => { isDragging = false; };
+    panel.addEventListener('mousedown', onDown);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  // Utilities
+  haversineKm(a, b) {
+    const toRad = (x) => x * Math.PI / 180;
+    const R = 6371; // km
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const lat1 = toRad(a.lat);
+    const lat2 = toRad(b.lat);
+    const h = Math.sin(dLat/2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng/2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+
+  computeBearing(a, b) {
+    const toRad = (x) => x * Math.PI / 180;
+    const toDeg = (x) => x * 180 / Math.PI;
+    const φ1 = toRad(a.lat), φ2 = toRad(b.lat);
+    const Δλ = toRad(b.lng - a.lng);
+    const y = Math.sin(Δλ) * Math.cos(φ2);
+    const x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+    const θ = Math.atan2(y, x);
+    return (toDeg(θ) + 360) % 360;
   }
 
   addDarkOverlay() {
@@ -145,69 +367,7 @@ class MapManager {
   }
 
   drawCountryBorders() {
-    // Define country bounding boxes and coordinates for glowing borders
-    const countries = {
-      'India': {
-        bounds: [[8.4, 68.7], [35.5, 97.4]],
-        center: [20.5937, 78.9629],
-        color: '#1ecc71'
-      },
-      'Pakistan': {
-        bounds: [[23.5, 60.5], [37.1, 77.8]],
-        center: [30.3753, 69.3451],
-        color: '#00ff88'
-      },
-      'Nepal': {
-        bounds: [[26.3, 80.1], [30.4, 88.2]],
-        center: [28.3949, 84.1240],
-        color: '#00ff88'
-      },
-      'Bhutan': {
-        bounds: [[26.8, 88.7], [28.2, 92.5]],
-        center: [27.5142, 90.4336],
-        color: '#00ff88'
-      },
-      'Bangladesh': {
-        bounds: [[20.7, 88.0], [26.6, 92.7]],
-        center: [23.6850, 90.3563],
-        color: '#00ff88'
-      },
-      'Sri Lanka': {
-        bounds: [5.9, 80.0], [7.7, 81.9],
-        center: [7.8731, 80.7718],
-        color: '#00ff88'
-      },
-      'Myanmar': {
-        bounds: [[9.3, 92.2], [28.5, 101.9]],
-        center: [21.9162, 95.9560],
-        color: '#00ff88'
-      },
-      'China': {
-        bounds: [[35.5, 73.5], [39.5, 100.0]],
-        center: [35.8617, 104.1954],
-        color: '#0088ff'
-      }
-    };
-
-    // Draw borders with glowing effect
-    Object.entries(countries).forEach(([name, data]) => {
-      const rectangle = L.rectangle(data.bounds, {
-        color: data.color,
-        weight: 2.5,
-        opacity: 0.8,
-        fillOpacity: 0.02,
-        fillColor: data.color,
-        dashArray: '3, 3',
-        lineCap: 'round',
-        lineJoin: 'round'
-      }).addTo(this.map);
-
-      // Add glow effect via CSS class (if styled in CSS)
-      const element = rectangle.getElement();
-      if (element) {
-        element.style.filter = 'drop-shadow(0 0 2px ' + data.color + ')';
-      }
-    });
+    // Intentionally left empty: rely on base map's natural borders only
   }
 
   addCountryLabels() {
