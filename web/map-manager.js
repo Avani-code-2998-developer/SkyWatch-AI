@@ -8,6 +8,7 @@ class MapManager {
     this.currentMapStyle = 'normal';
     this.radarAnimation = null;
     this.gridOverlay = null;
+    this.borderLayer = null;
 
     this.missileModeActive = true;
 
@@ -499,7 +500,108 @@ class MapManager {
   }
 
   drawCountryBorders() {
-    // Intentionally left empty: rely on base map's natural borders only
+    // Add country borders from Natural Earth GeoJSON
+    if (this.mapType === 'leaflet' && this.map) {
+      this.addBordersToLeaflet();
+    } else if (this.mapType === 'cesium' && this.worldwindGlobe) {
+      this.addBordersToWorldWind();
+    }
+  }
+
+  addBordersToLeaflet() {
+    // Check if borders already exist
+    if (this.borderLayer) return;
+
+    const self = this;
+    const geojsonUrl = 'https://naciscdn.org/naturalearth/110m/cultural/ne_110m_admin_0_countries.geojson';
+
+    fetch(geojsonUrl)
+      .then(response => response.json())
+      .then(data => {
+        this.borderLayer = L.geoJSON(data, {
+          style: {
+            color: '#1ecc71',
+            weight: 2.5,
+            opacity: 0.8,
+            fillOpacity: 0,
+            dashArray: '3,3'
+          },
+          onEachFeature: (feature, layer) => {
+            // Add glow effect styling
+            const el = layer.getElement ? layer.getElement() : null;
+            if (el) {
+              el.classList.add('border-glow');
+            }
+          }
+        }).addTo(this.map);
+
+        // Inject CSS for border glow if not present
+        if (!document.getElementById('border-glow-style')) {
+          const style = document.createElement('style');
+          style.id = 'border-glow-style';
+          style.textContent = `
+            .border-glow {
+              filter: drop-shadow(0 0 3px rgba(30, 204, 113, 0.8)) drop-shadow(0 0 6px rgba(0, 212, 255, 0.4));
+            }
+          `;
+          document.head.appendChild(style);
+        }
+
+        this.app.addAlert('Borders loaded - Satellite Map ready', 'success');
+      })
+      .catch(error => {
+        console.error('Border loading error:', error);
+        this.app.addAlert('Could not load borders', 'warning');
+      });
+  }
+
+  addBordersToWorldWind() {
+    // Simplified borders for WorldWind (using RenderableLayer)
+    if (this.borderLayer) return;
+
+    const self = this;
+    const geojsonUrl = 'https://naciscdn.org/naturalearth/110m/cultural/ne_110m_admin_0_countries.geojson';
+
+    fetch(geojsonUrl)
+      .then(response => response.json())
+      .then(data => {
+        // Create a layer for borders
+        const borderLayer = new WorldWind.RenderableLayer('Country Borders');
+
+        // Process GeoJSON and add to WorldWind
+        data.features.forEach(feature => {
+          if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
+            const coordinates = feature.geometry.coordinates;
+            const coords = feature.geometry.type === 'Polygon' ? coordinates[0] : coordinates[0][0];
+
+            // Convert to WorldWind positions
+            const positions = [];
+            coords.forEach(coord => {
+              positions.push(new WorldWind.Position(coord[1], coord[0], 0));
+            });
+
+            // Create polyline
+            const polyline = new WorldWind.Polyline(positions, null);
+            polyline.outlineColor = new WorldWind.Color(
+              30 / 255,
+              204 / 255,
+              113 / 255,
+              0.8
+            );
+            polyline.outlineWidth = 2;
+
+            borderLayer.addRenderable(polyline);
+          }
+        });
+
+        this.worldwindGlobe.addLayer(borderLayer);
+        this.borderLayer = borderLayer;
+        this.app.addAlert('Borders loaded - Satellite Globe ready', 'success');
+      })
+      .catch(error => {
+        console.error('WorldWind border error:', error);
+        this.app.addAlert('Could not load borders on 3D globe', 'warning');
+      });
   }
 
   addCountryLabels() {
@@ -805,10 +907,16 @@ class MapManager {
         this.addRadarAnimation();
         this.addGridOverlay();
         this.map.on('click', (e) => this.handleMapClick(e));
+        // Reset border layer for Leaflet
+        this.borderLayer = null;
+        setTimeout(() => this.addBordersToLeaflet(), 500);
       } else {
         mapContainer.classList.add('hidden');
         cesiumContainer.classList.remove('hidden');
         this.initCesium();
+        // Reset border layer for WorldWind
+        this.borderLayer = null;
+        setTimeout(() => this.addBordersToWorldWind(), 1000);
       }
 
       // Hide HUD panels when switching maps

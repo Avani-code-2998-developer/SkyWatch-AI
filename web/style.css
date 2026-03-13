@@ -1570,3 +1570,32 @@ input::placeholder {
   gap: 6px;
 }
 
+/* ==================== COUNTRY BORDERS STYLING ==================== */
+
+.leaflet-interactive.border-glow {
+  stroke: #1ecc71 !important;
+  stroke-width: 2.5 !important;
+  fill: none !important;
+  opacity: 0.8 !important;
+  filter: drop-shadow(0 0 3px rgba(30, 204, 113, 0.8)) drop-shadow(0 0 6px rgba(0, 212, 255, 0.4));
+}
+
+/* GeoJSON layer borders */
+.leaflet-pane path {
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* Satellite map border styling */
+#map .leaflet-interactive {
+  stroke: #1ecc71;
+  stroke-opacity: 0.8;
+  filter: drop-shadow(0 0 4px rgba(30, 204, 113, 0.6));
+}
+
+/* Border highlight on hover */
+#map svg g path:hover {
+  filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.8));
+  stroke-width: 3 !important;
+}
+
